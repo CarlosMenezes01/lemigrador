@@ -61,4 +61,33 @@ public class ConnectionFactory {
             }
         }
     }
+    public static Connection getAdminConnection(
+        String sgbd,
+        String host,
+        String porta,
+        String usuario,
+        String senha
+) {
+    try {
+        String url;
+        String driver;
+
+        if (sgbd.equalsIgnoreCase("postgresql")) {
+            driver = "org.postgresql.Driver";
+            url = "jdbc:postgresql://" + host + ":" + porta + "/postgres";
+        } else if (sgbd.equalsIgnoreCase("mysql") || sgbd.equalsIgnoreCase("mariadb")) {
+            driver = "com.mysql.cj.jdbc.Driver";
+            url = "jdbc:mysql://" + host + ":" + porta + "/";
+        } else {
+            throw new RuntimeException("SGBD não suportado para conexão administrativa");
+        }
+
+        Class.forName(driver);
+        return java.sql.DriverManager.getConnection(url, usuario, senha);
+
+    } catch (Exception e) {
+        throw new RuntimeException("Erro ao obter conexão administrativa: " + e.getMessage(), e);
+    }
+}
+
 }
