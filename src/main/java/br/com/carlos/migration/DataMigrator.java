@@ -11,59 +11,100 @@ import java.sql.Statement;
 
 public class DataMigrator {
 
-    public void migrarDados(Connection origem, Connection destino, Banco bancoOrigem) {
+    public void migrarDados(
+            Connection origem,
+            Connection destino,
+            Banco bancoOrigem) {
 
         try {
-            destino.setAutoCommit(false); // inicia transação
-
             for (Tabela tabela : bancoOrigem.getTabelas()) {
-                migrarTabela(tabela, origem, destino);
+                migrarTabela(origem, destino, tabela);
             }
-
-            destino.commit();
-            System.out.println("Migração de dados concluída com sucesso.");
-
         } catch (Exception e) {
-            try {
-                destino.rollback();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-            throw new RuntimeException("Erro na migração de dados: " + e.getMessage(), e);
+            throw new RuntimeException(
+                "Erro na migração de dados: " + e.getMessage(), e
+            );
         }
     }
 
-    private void migrarTabela(Tabela tabela, Connection origem, Connection destino) throws Exception {
+    private void migrarTabela(
+            Connection origem,
+            Connection destino,
+            Tabela tabela) throws Exception {
 
-        String sqlSelect = "SELECT * FROM " + tabela.getNome();
+        String selectSQL = "SELECT * FROM " + tabela.getNome();
 
         try (
-            Statement stmt = origem.createStatement();
-            ResultSet rs = stmt.executeQuery(sqlSelect)
+            Statement stmtOrigem = origem.createStatement();
+            ResultSet rs = stmtOrigem.executeQuery(selectSQL)
         ) {
-            int totalColunas = tabela.getColunas().size();
-
-            StringBuilder sqlInsert = new StringBuilder();
-            sqlInsert.append("INSERT INTO ")
-                     .append(tabela.getNome())
-                     .append(" VALUES (");
-
-            for (int i = 0; i < totalColunas; i++) {
-                sqlInsert.append("?");
-                if (i < totalColunas - 1) sqlInsert.append(", ");
-            }
-            sqlInsert.append(")");
-
-            PreparedStatement ps = destino.prepareStatement(sqlInsert.toString());
 
             while (rs.next()) {
-                int index = 1;
-                for (Coluna coluna : tabela.getColunas()) {
-                    ps.setObject(index++, rs.getObject(coluna.getNome()));
+
+                if (registroExiste(destino, tabela, rs)) {
+                    continue; // ignora duplicado
                 }
-                ps.executeUpdate();
+
+                String insertSQL = gerarInsert(tabela);
+                try (PreparedStatement ps = destino.prepareStatement(insertSQL)) {
+
+                    int idx = 1;
+                    for (Coluna col : tabela.getColunas()) {
+                        ps.setObject(idx++, rs.getObject(col.getNome()));
+                    }
+
+                    ps.executeUpdate();
+                }
             }
         }
     }
+
+    private boolean registroExiste(
+            Connection destino,
+            Tabela tabela,
+            ResultSet rsOrigem) throws Exception {
+
+        Coluna pk = tabela.getColunas().stream()
+                .filter(Coluna::isChavePrimaria)
+                .findFirst()
+                .orElse(null);
+
+        if (pk == null) return false;
+
+        String sql =
+            "SELECT 1 FROM " + tabela.getNome() +
+            " WHERE " + pk.getNome() + " = ?";
+
+        try (PreparedStatement ps = destino.prepareStatement(sql)) {
+            ps.setObject(1, rsOrigem.getObject(pk.getNome()));
+            ResultSet rs = ps.executeQuery();
+            return rs.next();
+        }
+    }
+
+    private String gerarInsert(Tabela tabela) {
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("INSERT INTO ")
+          .append(tabela.getNome())
+          .append(" (");
+
+        for (int i = 0; i < tabela.getColunas().size(); i++) {
+            sb.append(tabela.getColunas().get(i).getNome());
+            if (i < tabela.getColunas().size() - 1) sb.append(", ");
+        }
+
+        sb.append(") VALUES (");
+
+        for (int i = 0; i < tabela.getColunas().size(); i++) {
+            sb.append("?");
+            if (i < tabela.getColunas().size() - 1) sb.append(", ");
+        }
+
+        sb.append(")");
+
+        return sb.toString();
+    }
 }
+
 

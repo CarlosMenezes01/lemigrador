@@ -4,7 +4,6 @@ import br.com.carlos.model.Coluna;
 import br.com.carlos.model.Tabela;
 import br.com.carlos.types.SqlTypeMapper;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -12,77 +11,58 @@ public class CreateTableGenerator {
 
     private final SqlTypeMapper typeMapper;
 
-    // 🔴 Construtor obrigatório com TypeMapper
     public CreateTableGenerator(SqlTypeMapper typeMapper) {
         this.typeMapper = typeMapper;
     }
 
     public String gerarCreateTable(Tabela tabela) {
 
-        StringBuilder sql = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
+        sb.append("CREATE TABLE ")
+          .append(tabela.getNome())
+          .append(" (\n");
 
-        // CREATE TABLE nome_tabela (
-        sql.append("CREATE TABLE ")
-           .append(tabela.getNome())
-           .append(" (\n");
+        List<Coluna> colunas = tabela.getColunas();
+        int index = 0;
 
-        List<String> definicoes = new ArrayList<>();
-        List<String> primaryKeys = new ArrayList<>();
-        List<String> foreignKeys = new ArrayList<>();
+        for (Coluna coluna : colunas) {
 
-        // =========================
-        // DEFINIÇÃO DAS COLUNAS
-        // =========================
-        for (Coluna coluna : tabela.getColunas()) {
-
-            StringBuilder colunaSql = new StringBuilder();
-            colunaSql.append("    ")
-                     .append(coluna.getNome())
-                     .append(" ")
-                     .append(typeMapper.mapearTipo(coluna));
+            sb.append("  ")
+              .append(coluna.getNome())
+              .append(" ")
+              .append(typeMapper.mapearTipo(coluna));
 
             if (!coluna.isNullable()) {
-                colunaSql.append(" NOT NULL");
+                sb.append(" NOT NULL");
             }
 
-            definicoes.add(colunaSql.toString());
-
-            // PRIMARY KEY
-            if (coluna.isChavePrimaria()) {
-                primaryKeys.add(coluna.getNome());
-            }
-
-            // FOREIGN KEY
-            if (coluna.isChaveEstrangeira()) {
-                foreignKeys.add(
-                    "    FOREIGN KEY (" + coluna.getNome() + ") REFERENCES "
-                    + coluna.getTabelaReferenciada()
-                    + "(" + coluna.getColunaReferenciada() + ")"
-                );
-            }
+            sb.append(",\n");
+            index++;
         }
 
-        // =========================
-        // PRIMARY KEY
-        // =========================
-        if (!primaryKeys.isEmpty()) {
-            definicoes.add(
-                "    PRIMARY KEY (" + String.join(", ", primaryKeys) + ")"
-            );
+        // ===== CHAVE PRIMÁRIA =====
+        List<Coluna> pkCols = colunas.stream()
+                .filter(Coluna::isChavePrimaria)
+                .collect(Collectors.toList());
+
+        if (!pkCols.isEmpty()) {
+            sb.append("  PRIMARY KEY (");
+            for (int i = 0; i < pkCols.size(); i++) {
+                sb.append(pkCols.get(i).getNome());
+                if (i < pkCols.size() - 1) sb.append(", ");
+            }
+            sb.append(")\n");
+        } else {
+            // remove última vírgula
+            sb.setLength(sb.length() - 2);
+            sb.append("\n");
         }
 
-        // =========================
-        // FOREIGN KEYS
-        // =========================
-        definicoes.addAll(foreignKeys);
+        sb.append(");");
 
-        // Junta tudo com vírgula
-        sql.append(definicoes.stream().collect(Collectors.joining(",\n")));
-
-        // Fecha CREATE TABLE
-        sql.append("\n);");
-
-        return sql.toString();
+        return sb.toString();
     }
 }
+
+
 

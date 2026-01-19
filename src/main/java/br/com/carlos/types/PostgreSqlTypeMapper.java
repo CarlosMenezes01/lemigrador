@@ -9,14 +9,26 @@ public class PostgreSqlTypeMapper implements SqlTypeMapper {
 
         String tipo = coluna.getTipo().toUpperCase();
 
-        return switch (tipo) {
-            case "INT", "INTEGER" -> "INTEGER";
-            case "BIGINT" -> "BIGINT";
-            case "VARCHAR", "VARCHAR2" -> "VARCHAR";
-            case "DECIMAL", "NUMERIC" -> "NUMERIC";
-            case "DATE" -> "DATE";
-            case "DATETIME", "TIMESTAMP" -> "TIMESTAMP";
-            default -> tipo;
-        };
+        switch (tipo) {
+            case "INT":
+            case "INTEGER":
+                return "INTEGER";
+
+            case "VARCHAR":
+                return "VARCHAR(" + coluna.getTamanho() + ")";
+
+            case "DECIMAL":
+                return "DECIMAL";
+
+            case "DATE":
+                return "DATE";
+
+            case "DATETIME":
+                return "TIMESTAMP";
+
+            default:
+                return tipo;
+        }
     }
 }
+
