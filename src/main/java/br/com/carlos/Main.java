@@ -3,6 +3,7 @@ package br.com.carlos;
 import br.com.carlos.admin.DatabaseCreator;
 import br.com.carlos.dao.MetadataReader;
 import br.com.carlos.ddl.CreateTableGenerator;
+import br.com.carlos.migration.DataMigrator;
 import br.com.carlos.migration.SchemaMigrator;
 import br.com.carlos.model.Banco;
 import br.com.carlos.types.PostgreSqlTypeMapper;
@@ -25,8 +26,12 @@ public class Main {
         bancoOrigem.setUsuario("tcc_user");
         bancoOrigem.setSenha("tcc123");
 
+        // Lê estrutura do banco origem
         MetadataReader reader = new MetadataReader();
         reader.lerEstruturaBanco(bancoOrigem);
+
+        // Conexão com banco origem
+        Connection connOrigem = ConnectionFactory.getConnection(bancoOrigem);
 
         // =========================
         // BANCO DESTINO (PostgreSQL)
@@ -38,7 +43,7 @@ public class Main {
         String senhaDestino = "postgres123";
         String nomeBancoDestino = "tcc_migracao_auto";
 
-        // Criação do banco (se já existir, ignora)
+        // Criação automática do banco (Sprint 6)
         try {
             Connection adminConn = ConnectionFactory.getAdminConnection(
                     sgbdDestino,
@@ -48,9 +53,11 @@ public class Main {
                     senhaDestino
             );
             DatabaseCreator.criarBanco(adminConn, nomeBancoDestino);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            // Banco já existe
+        }
 
-        // Conexão com o banco destino
+        // Conexão com banco destino
         Banco bancoDestino = new Banco();
         bancoDestino.setSgbd(sgbdDestino);
         bancoDestino.setHost(hostDestino);
@@ -62,14 +69,21 @@ public class Main {
         Connection connDestino = ConnectionFactory.getConnection(bancoDestino);
 
         // =========================
-        // MIGRAÇÃO DO ESQUEMA
+        // MIGRAÇÃO DO ESQUEMA (Sprint 7)
         // =========================
         CreateTableGenerator generator =
                 new CreateTableGenerator(new PostgreSqlTypeMapper());
 
-        SchemaMigrator migrator = new SchemaMigrator(generator);
-        migrator.migrarSchema(connDestino, bancoOrigem);
+        SchemaMigrator schemaMigrator = new SchemaMigrator(generator);
+        schemaMigrator.migrarSchema(connDestino, bancoOrigem);
 
-        System.out.println("Migração de esquema finalizada com sucesso.");
+        // =========================
+        // MIGRAÇÃO DOS DADOS (Sprint 8)
+        // =========================
+        DataMigrator dataMigrator = new DataMigrator();
+        dataMigrator.migrarDados(connOrigem, connDestino, bancoOrigem);
+
+        System.out.println("Migração completa (esquema + dados) finalizada com sucesso.");
     }
 }
+
