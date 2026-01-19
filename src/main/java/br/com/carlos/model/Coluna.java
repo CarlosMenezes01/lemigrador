@@ -8,6 +8,11 @@ public class Coluna {
     private boolean nullable;
     private boolean chavePrimaria;
 
+    // Foreign Key
+    private boolean chaveEstrangeira;
+    private String tabelaReferenciada;
+    private String colunaReferenciada;
+
     public Coluna() {
     }
 
@@ -16,7 +21,6 @@ public class Coluna {
         this.tipo = tipo;
     }
 
-    // Nome da coluna (ex: id, nome, email)
     public String getNome() {
         return nome;
     }
@@ -25,7 +29,6 @@ public class Coluna {
         this.nome = nome;
     }
 
-    // Tipo de dado (ex: INT, VARCHAR, DATE)
     public String getTipo() {
         return tipo;
     }
@@ -34,7 +37,6 @@ public class Coluna {
         this.tipo = tipo;
     }
 
-    // Tamanho do campo (ex: VARCHAR(100))
     public Integer getTamanho() {
         return tamanho;
     }
@@ -43,7 +45,6 @@ public class Coluna {
         this.tamanho = tamanho;
     }
 
-    // Pode aceitar NULL?
     public boolean isNullable() {
         return nullable;
     }
@@ -52,7 +53,6 @@ public class Coluna {
         this.nullable = nullable;
     }
 
-    // É chave primária?
     public boolean isChavePrimaria() {
         return chavePrimaria;
     }
@@ -61,8 +61,40 @@ public class Coluna {
         this.chavePrimaria = chavePrimaria;
     }
 
+    public boolean isChaveEstrangeira() {
+        return chaveEstrangeira;
+    }
+
+    public void setChaveEstrangeira(boolean chaveEstrangeira) {
+        this.chaveEstrangeira = chaveEstrangeira;
+    }
+
+    public String getTabelaReferenciada() {
+        return tabelaReferenciada;
+    }
+
+    public void setTabelaReferenciada(String tabelaReferenciada) {
+        this.tabelaReferenciada = tabelaReferenciada;
+    }
+
+    public String getColunaReferenciada() {
+        return colunaReferenciada;
+    }
+
+    public void setColunaReferenciada(String colunaReferenciada) {
+        this.colunaReferenciada = colunaReferenciada;
+    }
+
     @Override
     public String toString() {
+        if (chaveEstrangeira) {
+            return nome + " " + tipo +
+                " (FK -> " + tabelaReferenciada + "." + colunaReferenciada + ")";
+        }
+        if (chavePrimaria) {
+            return nome + " " + tipo + " (PK)";
+        }
         return nome + " " + tipo;
     }
+
 }
