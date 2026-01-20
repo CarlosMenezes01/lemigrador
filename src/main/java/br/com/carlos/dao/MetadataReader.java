@@ -14,17 +14,16 @@ public class MetadataReader {
 
     public void lerEstruturaBanco(Banco banco) throws SQLException {
 
-        // Abre conexão (try-with-resources garante fechamento)
         try (Connection connection = ConnectionFactory.getConnection(banco)) {
 
             DatabaseMetaData metaData = connection.getMetaData();
 
             // =========================
-            // 1. LER TABELAS
+            // 1. LER TABELAS (PORTÁVEL)
             // =========================
             try (ResultSet tabelasRs = metaData.getTables(
-                    null,
-                    banco.getSchema(),
+                    connection.getCatalog(), // MySQL: banco | PostgreSQL: ok
+                    banco.getSchema(),       // PostgreSQL: public | MySQL: null
                     "%",
                     new String[]{"TABLE"})) {
 
@@ -34,10 +33,10 @@ public class MetadataReader {
                     Tabela tabela = new Tabela(nomeTabela);
 
                     // =========================
-                    // 2. LER COLUNAS DA TABELA
+                    // 2. LER COLUNAS
                     // =========================
                     try (ResultSet colunasRs = metaData.getColumns(
-                            null,
+                            connection.getCatalog(),
                             banco.getSchema(),
                             nomeTabela,
                             "%")) {
@@ -58,10 +57,10 @@ public class MetadataReader {
                     }
 
                     // =========================
-                    // 3. LER CHAVES PRIMÁRIAS
+                    // 3. CHAVE PRIMÁRIA
                     // =========================
                     try (ResultSet pkRs = metaData.getPrimaryKeys(
-                            null,
+                            connection.getCatalog(),
                             banco.getSchema(),
                             nomeTabela)) {
 
@@ -77,10 +76,10 @@ public class MetadataReader {
                     }
 
                     // =========================
-                    // 4. LER CHAVES ESTRANGEIRAS
+                    // 4. CHAVES ESTRANGEIRAS
                     // =========================
                     try (ResultSet fkRs = metaData.getImportedKeys(
-                            null,
+                            connection.getCatalog(),
                             banco.getSchema(),
                             nomeTabela)) {
 
@@ -101,7 +100,7 @@ public class MetadataReader {
                     }
 
                     // =========================
-                    // 5. ADICIONAR TABELA AO BANCO
+                    // 5. ADICIONAR AO BANCO
                     // =========================
                     banco.addTabela(tabela);
                 }
@@ -109,4 +108,5 @@ public class MetadataReader {
         }
     }
 }
+
 
